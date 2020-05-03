@@ -23,30 +23,32 @@
  */
 package net.sourceforge.plantuml.servlet;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.ByteArrayOutputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletRequest;
-
 import net.sourceforge.plantuml.BlockUml;
+import net.sourceforge.plantuml.ErrorUml;
 import net.sourceforge.plantuml.FileFormat;
 import net.sourceforge.plantuml.FileFormatOption;
-import net.sourceforge.plantuml.OptionFlags;
 import net.sourceforge.plantuml.NullOutputStream;
+import net.sourceforge.plantuml.OptionFlags;
 import net.sourceforge.plantuml.SourceStringReader;
 import net.sourceforge.plantuml.StringUtils;
 import net.sourceforge.plantuml.code.Base64Coder;
-import net.sourceforge.plantuml.core.DiagramDescription;
 import net.sourceforge.plantuml.core.Diagram;
+import net.sourceforge.plantuml.core.DiagramDescription;
 import net.sourceforge.plantuml.core.ImageData;
-import net.sourceforge.plantuml.version.Version;
 import net.sourceforge.plantuml.error.PSystemError;
-import net.sourceforge.plantuml.ErrorUml;
+import net.sourceforge.plantuml.servlet.utility.UmlDecorator;
+import net.sourceforge.plantuml.version.Version;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -56,6 +58,8 @@ import net.sourceforge.plantuml.ErrorUml;
 class DiagramResponse {
 
     private static final String POWERED_BY = "PlantUML Version " + Version.versionString();
+
+    private static final Logger LOGGER = Logger.getLogger(DiagramResponse.class.getName());
 
     private HttpServletResponse response;
     private FileFormat format;
@@ -86,7 +90,16 @@ class DiagramResponse {
     void sendDiagram(String uml, int idx) throws IOException {
         response.addHeader("Access-Control-Allow-Origin", "*");
         response.setContentType(getContentType());
-        SourceStringReader reader = new SourceStringReader(uml);
+        String decoratedUml = UmlDecorator.decorateUml(uml);
+        SourceStringReader reader = new SourceStringReader(decoratedUml);
+        // Check if the decorated UML causes issues, if so, revert to the original
+        String plantUmlWarningOrError = reader.getBlocks().get(0).getDiagram().getWarningOrError();
+        if (plantUmlWarningOrError != null) {
+            LOGGER.log(Level.WARNING, "Decorated UML causes a warning or error, reverting back to the original.",
+                    plantUmlWarningOrError);
+            reader = new SourceStringReader(uml);
+        }
+
         if (format == FileFormat.BASE64) {
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
             final DiagramDescription result = reader.outputImage(baos, idx, new FileFormatOption(FileFormat.PNG));

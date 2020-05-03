@@ -13,7 +13,7 @@ To know more about PlantUML, please visit http://plantuml.com/.
 Requirements
 ============
 
- * jre/jdk 1.6.0 or above
+ * jre/jdk 1.8.0 or above
  * apache maven 3.0.2 or above
 
 How to run the server
@@ -90,6 +90,10 @@ You can set all  the following variables:
 * `ALLOW_PLANTUML_INCLUDE`
     * Enables `!include` processing which can read files from the server into diagrams. Files are read relative to the current working directory.
     * Default value: `false`
+* `PLANTUML_PRE_INCLUDE_UML`
+    * If set, the contents of the file at the given path will be inject immediately after a `@startuml` directive. This allows the inclusion of
+    a set of default styles for this server.
+    * Default value: `null`
 
 Alternate: How to build your docker image
 ======================================================
